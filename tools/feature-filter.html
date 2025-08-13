@@ -101,7 +101,7 @@
 
       status.textContent = 'Filtering (running Python in browser)…';
 
-      const pyCode = `
+      const pyCode = String.raw`
 from typing import List, Tuple, Dict, Optional
 
 def parse_feature_table(lines: List[str]):
