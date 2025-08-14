@@ -11,4 +11,53 @@
       <li><a href="tools/your-next-tool.html">Your Next Tool</a></li>
     </ul>
   </main>
+
+<script>
+  (function () {
+    // Smoothed cursor follower with requestAnimationFrame
+    const html = document.documentElement;
+
+    // Start in the center
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight / 2;
+    let curX = targetX;
+    let curY = targetY;
+
+    const smoothing = 0.12; // lower = smoother/slower, higher = snappier
+
+    // Update target on mouse move
+    window.addEventListener('mousemove', (e) => {
+      targetX = e.clientX;
+      targetY = e.clientY;
+    });
+
+    // Keep things reasonable on resize
+    window.addEventListener('resize', () => {
+      targetX = Math.min(Math.max(targetX, 0), window.innerWidth);
+      targetY = Math.min(Math.max(targetY, 0), window.innerHeight);
+    });
+
+    // Respect reduced-motion: set a static, tasteful position and bail out
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) {
+      html.style.setProperty('--mx', '50vw');
+      html.style.setProperty('--my', '30vh');
+      return;
+    }
+
+    // Animation loop
+    function tick() {
+      curX += (targetX - curX) * smoothing;
+      curY += (targetY - curY) * smoothing;
+
+      // We use px so the halo aligns precisely with the cursor
+      html.style.setProperty('--mx', curX + 'px');
+      html.style.setProperty('--my', curY + 'px');
+
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+</script>
+
 </body></html>
