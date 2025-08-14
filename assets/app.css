@@ -140,3 +140,47 @@ pre {
   text-align: center;
   margin-top: 18px;
 }
+
+/* Form row layout for tool headers */
+.form-row {
+  display: flex;
+  align-items: flex-end;   /* aligns button to bottom edge of inputs */
+  gap: 12px;
+  flex-wrap: wrap;         /* wrap on small screens instead of overlapping */
+  margin-top: 8px;
+}
+
+.form-col { flex: 1 1 320px; min-width: 220px; }
+
+/* Narrower column for the file input */
+.form-col--file {
+  flex: 0 1 320px;         /* prefers ~320px, can shrink but won’t grow too large */
+  min-width: 260px;
+  max-width: 380px;
+}
+
+/* Wider column for the query text input */
+.form-col--query {
+  flex: 1 1 600px;         /* prefers wider space */
+  min-width: 300px;
+}
+
+/* Button column stays content-sized */
+.form-col--actions {
+  flex: 0 0 auto;
+}
+
+/* Make sure file input doesn't overflow weirdly */
+input[type="file"] {
+  width: 100%;
+}
+
+/* Optional: on very small screens, make each item full-width, stacked */
+@media (max-width: 640px) {
+  .form-row { align-items: stretch; }
+  .form-col,
+  .form-col--file,
+  .form-col--query,
+  .form-col--actions { flex: 1 1 100%; }
+  .form-col--actions button { width: 100%; }  /* button becomes full-width when stacked */
+}
