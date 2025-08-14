@@ -3,16 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NCBI 5-Column Feature Table Filter (Pyodide)</title>
-  <link rel="stylesheet" href="../assets/app.css" />
+  <title>NCBI 5‑Column Feature Table Filter (Pyodide)</title>
+  <style>
+    :root { --bg:#0b1020; --card:#12182d; --muted:#8aa0b6; --fg:#e6ecf3; --accent:#7cc4ff; }
+    html,body{height:100%;}
+    body{margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--fg);}
+    .container{max-width:1000px; margin:0 auto; padding:24px;}
+    .card{background:var(--card); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25);} 
+    h1{font-weight:700; font-size:clamp(22px, 2.5vw, 30px); margin:0 0 12px;}
+    p{color:var(--muted); margin:0 0 14px;}
+    .row{display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
+    .row > *{flex:1 1 auto;}
+    label{font-size:14px; color:var(--muted); display:block; margin-bottom:6px;}
+    input[type="text"], input[type="file"]{width:100%; padding:10px 12px; border-radius:10px; border:1px solid #24314d; background:#0e1430; color:var(--fg);} 
+    button{appearance:none; border:0; border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer; background:linear-gradient(135deg, #2a7fff, #7cc4ff); color:#071326; box-shadow:0 6px 18px rgba(124,196,255,.35);} 
+    button[disabled]{opacity:.6; cursor:not-allowed;}
+    pre{white-space:pre; overflow:auto; background:#0e1430; border-radius:12px; padding:16px; border:1px solid #223259;}
+    .badge{display:inline-block; font-size:12px; color:#071326; background:var(--accent); padding:2px 8px; border-radius:999px; margin-left:8px;}
+    .footer{font-size:12px; color:var(--muted); text-align:center; margin-top:18px;}
+    .hidden{display:none;}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;}
+  </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <h1>NCBI 5-Column Feature Table Filter</h1>
-      <p>Upload a 5-column NCBI feature table (.tbl / text), enter a qualifier value to search (case-insensitive), and download a filtered table containing only matching feature blocks. No server—everything runs in your browser.</p>
+      <h1>NCBI 5‑Column Feature Table Filter <span class="badge">Pyodide</span></h1>
+      <p>Upload a 5‑column NCBI feature table (<span class="mono">.tbl</span> / text), enter a qualifier <em>value</em> to search (case‑insensitive), and download a filtered table containing only matching feature blocks. No server—everything runs in your browser.</p>
 
-      <div class="row" style="margin-top:8px; gap:12px;">
+      <div class="row" style="margin-top:8px;">
         <div style="min-width:280px;">
           <label>Feature table file</label>
           <input id="file" type="file" accept=".tbl,.txt,.tsv,text/plain" />
@@ -29,22 +48,30 @@
       <p id="status" class="mono" style="margin-top:10px;">Loading Pyodide…</p>
 
       <div id="resultWrap" class="hidden" style="margin-top:14px;">
-        <label>Filtered output (preview)</label>
-        <pre id="output" class="mono" style="min-height:180px;"></pre>
-        <button id="downloadBtn" class="hidden">Download .tbl</button>
+        <div class="row" style="align-items:flex-start;">
+          <div style="flex:1 1 70%; min-width:280px;">
+            <label>Filtered output (preview)</label>
+            <pre id="output" class="mono" style="min-height:180px;"></pre>
+          </div>
+          <div style="flex:1 1 30%; min-width:200px;">
+            <label>&nbsp;</label>
+            <button id="downloadBtn" class="hidden">Download .tbl</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="footer">Built with <a href="https://pyodide.org/" target="_blank" rel="noreferrer" style="color:var(--accent); text-decoration:none;">Pyodide</a>. Your data never leaves your browser.</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
   <script>
+    let pyodideReadyPromise;
     let pyodide;
 
     async function loadPyodideAndPackages() {
       pyodide = await loadPyodide({
         indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
       });
+      return pyodide;
     }
 
     async function init() {
@@ -58,12 +85,13 @@
         runBtn.disabled = false;
       } catch (e) {
         console.error(e);
-        status.textContent = 'Failed to load Pyodide.';
+        status.textContent = 'Failed to load Pyodide. Check your network or try again later.';
       }
     }
+
     window.addEventListener('DOMContentLoaded', init);
 
-    document.getElementById('file').addEventListener('change', () => {
+    document.getElementById('file').addEventListener('change', (e) => {
       document.getElementById('resultWrap').classList.add('hidden');
       document.getElementById('downloadBtn').classList.add('hidden');
       document.getElementById('output').textContent = '';
@@ -78,11 +106,11 @@
       const downloadBtn = document.getElementById('downloadBtn');
 
       if (!fileInput.files || !fileInput.files[0]) {
-        alert('Please choose a feature table file.');
+        alert('Please choose a 5‑column feature table file.');
         return;
       }
       if (!query) {
-        alert('Please enter a qualifier value.');
+        alert('Please enter a qualifier value to search for.');
         return;
       }
 
@@ -90,13 +118,13 @@
       const file = fileInput.files[0];
       const text = await file.text();
 
-      status.textContent = 'Filtering…';
+      status.textContent = 'Filtering (running Python in browser)…';
 
-const pyCode = String.raw`
+      const pyCode = String.raw`
 from typing import List, Tuple, Dict, Optional
 
 def parse_feature_table(lines: List[str]):
-    sections = []
+    sections = []  # List[Tuple[str, List[dict]]]
     current_header: Optional[str] = None
     current_features: List[Dict] = []
     current_feature: Optional[Dict] = None
@@ -115,7 +143,7 @@ def parse_feature_table(lines: List[str]):
         current_features = []
 
     for raw in lines:
-        line = raw.rstrip('\\n')
+        line = raw.rstrip('\n')
         if not line:
             finalize_feature()
             continue
@@ -125,11 +153,11 @@ def parse_feature_table(lines: List[str]):
             current_header = line
             current_features = []
             continue
-        parts = line.split('\\t')
+        parts = line.split('\t')
         if len(parts) < 5:
             parts += [''] * (5 - len(parts))
         c1, c2, c3, c4, c5 = (p.strip() for p in parts[:5])
-        if c3:  # start of a new feature
+        if c3:  # new feature start
             finalize_feature()
             if not c1 or not c2:
                 raise ValueError(f"Malformed feature line (missing start/end): {line}")
@@ -145,10 +173,12 @@ def parse_feature_table(lines: List[str]):
                 raise ValueError(f"Qualifier without an active feature: {line}")
             current_feature['qualifiers'].append((c4, c5))
             continue
+        # ignore unrecognized lines silently
 
     finalize_feature()
     finalize_section()
     return sections
+
 
 def filter_sections_by_qual_value(sections, search_value: str):
     sval = search_value.lower()
@@ -156,11 +186,12 @@ def filter_sections_by_qual_value(sections, search_value: str):
     for header, features in sections:
         kept = []
         for feat in features:
-            match = any((val is not None and sval in str(val).lower()) for (_k, val) in feat["qualifiers"])
+            match = any((val is not None and sval in str(val).lower()) for (_k, val) in feat['qualifiers'])
             if match:
                 kept.append(feat)
         filtered.append((header, kept))
     return filtered
+
 
 def render_feature_table(sections_filtered) -> List[str]:
     out_lines: List[str] = []
@@ -169,34 +200,35 @@ def render_feature_table(sections_filtered) -> List[str]:
             continue
         out_lines.append(header)
         for feat in feats:
-            intervals = feat["intervals"]
-            key = feat["key"]
-            qualifiers = feat["qualifiers"]
+            intervals = feat['intervals']
+            key = feat['key']
+            qualifiers = feat['qualifiers']
             s0, e0 = intervals[0]
-            out_lines.append('\\t'.join([s0, e0, key, '', '']))
+            out_lines.append('\t'.join([s0, e0, key, '', '']))
             for (s, e) in intervals[1:]:
-                out_lines.append('\\t'.join([s, e, '', '', '']))
+                out_lines.append('\t'.join([s, e, '', '', '']))
             for (qk, qv) in qualifiers:
-                out_lines.append('\\t'.join(['', '', '', qk, qv]))
+                out_lines.append('\t'.join(['', '', '', qk, qv]))
     return out_lines
 
-def filter_table(file_text: str, query: str):
-    lines = file_text.split('\\n')
+# Entrypoint called from JS
+
+def filter_table(file_text: str, query: str) -> str:
+    lines = file_text.split('\n')
     sections = parse_feature_table(lines)
     filtered = filter_sections_by_qual_value(sections, query)
     rendered = render_feature_table(filtered)
-    total_matches = sum(len(feats) for _, feats in filtered)
-    return '\\n'.join(rendered) + ('\\n' if rendered else ''), total_matches
-`;
+    return '\n'.join(rendered) + ('\n' if rendered else '')
+      `;
+
       try {
         await pyodide.runPythonAsync(pyCode);
-        const resultTuple = pyodide.globals.get('filter_table')(text, query);
-        const outText = resultTuple.get(0).toString();
-        const matchCount = resultTuple.get(1);
-
-        outPre.textContent = `# Matches found: ${matchCount}\n` + (outText || '[No matches]');
+        const result = pyodide.globals.get('filter_table')(text, query);
+        const outText = result.toString();
+        outPre.textContent = outText || '[No matches]';
         resultWrap.classList.remove('hidden');
 
+        // Prepare download if there is content
         if (outText && outText.trim().length > 0) {
           const blob = new Blob([outText], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
@@ -215,13 +247,14 @@ def filter_table(file_text: str, query: str):
         status.textContent = 'Done.';
       } catch (err) {
         console.error(err);
-        status.textContent = 'Error: ' + (err.message || err);
+        status.textContent = 'Error: ' + (err && err.message ? err.message : String(err));
         outPre.textContent = '';
         downloadBtn.classList.add('hidden');
         resultWrap.classList.remove('hidden');
       }
     });
   </script>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 </body>
 </html>
-
